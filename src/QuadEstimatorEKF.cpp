@@ -179,6 +179,19 @@ VectorXf QuadEstimatorEKF::PredictState(VectorXf curState, float dt, V3F accel, 
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
   
+  // given dt is small, assuming simple linear integration
+  predictedState(0) = curState(0) + dt*curState(3);
+  predictedState(1) = curState(1) + dt*curState(4);
+  predictedState(2) = curState(2) + dt*curState(5);
+
+  // calculating predicted velocity
+  
+  // we have acceleration in the body frame, we will now convert it to inertial frame
+  V3F accel_i = attitude.Rotate_BtoI(accel);
+
+  predictedState(3) = curState(3) + dt*accel_i.x;
+  predictedState(4) = curState(4) + dt*accel_i.y;
+  predictedState(5) = curState(5) + dt*accel_i.z - dt * CONST_GRAVITY;
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
@@ -206,7 +219,19 @@ MatrixXf QuadEstimatorEKF::GetRbgPrime(float roll, float pitch, float yaw)
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
 
+  float phi = roll;
+  float theta = pitch;
+  float psi = yaw;
 
+  RbgPrime(0,0) = -cos(theta)*sin(psi);
+  RbgPrime(0,1) = -sin(phi)*sin(theta)*sin(psi) - cos(phi)*cos(psi);
+  RbgPrime(0,2) = -cos(phi)*sin(theta)*sin(psi) + sin(phi)*cos(psi);
+  RbgPrime(1,0) = cos(theta)*sin(psi);
+  RbgPrime(1,1) = sin(phi)*sin(theta)*cos(psi) - cos(phi)*sin(psi);
+  RbgPrime(1,2) = cos(phi)*sin(theta)*cos(psi) + sin(phi)*sin(psi);
+  RbgPrime(2,0) = 0;
+  RbgPrime(2,1) = 0;
+  RbgPrime(2,2) = 0;
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
   return RbgPrime;
@@ -252,7 +277,21 @@ void QuadEstimatorEKF::Predict(float dt, V3F accel, V3F gyro)
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
 
+  // Update Jacobian g' with the right values //
+  
+  // set dt first
+  gPrime(0, 3) = dt;
+  gPrime(1, 4) = dt;
+  gPrime(2, 5) = dt;
 
+  // calculate 7th column values
+  gPrime(3, 6) = (RbgPrime(0) * accel).sum() * dt;
+  gPrime(4, 6) = (RbgPrime(1) * accel).sum() * dt;
+  gPrime(5, 6) = (RbgPrime(2) * accel).sum() * dt;
+
+  // calculate new covariance
+
+  ekfCov = gPrime * ekfCov * gPrime.transpose() + Q;
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
   ekfState = newState;
