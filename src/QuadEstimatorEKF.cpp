@@ -344,7 +344,7 @@ void QuadEstimatorEKF::UpdateFromMag(float magYaw)
 
   if (delta > F_PI) {
     zFromX(0) += 2.f * F_PI;
-  } else if (delta < F_PI) {
+  } else if (delta < -F_PI) {
     zFromX(0) -= 2.f * F_PI;
   }
   /////////////////////////////// END STUDENT CODE ////////////////////////////
