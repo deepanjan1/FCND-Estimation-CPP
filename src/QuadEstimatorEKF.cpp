@@ -1,4 +1,4 @@
-    #include "Common.h"
+#include "Common.h"
 #include "QuadEstimatorEKF.h"
 #include "Utility/SimpleConfig.h"
 #include "Utility/StringUtils.h"
@@ -93,13 +93,30 @@ void QuadEstimatorEKF::UpdateFromIMU(V3F accel, V3F gyro)
   // (replace the code below)
   // make sure you comment it out when you add your own code -- otherwise e.g. you might integrate yaw twice
 
-  float predictedPitch = pitchEst + dtIMU * gyro.y;
-  float predictedRoll = rollEst + dtIMU * gyro.x;
-  ekfState(6) = ekfState(6) + dtIMU * gyro.z;	// yaw
+  float phi = rollEst;
+  float theta = pitchEst;
+
+  Mat3x3F rot_mat = Mat3x3F::Zeros();
+
+  rot_mat(0,0) = 1;
+  rot_mat(0,1) = sin(phi)*tan(theta);
+  rot_mat(0,2) = cos(phi)*tan(theta);
+  rot_mat(1,1) = cos(phi);
+  rot_mat(1,2) = -sin(phi);
+  rot_mat(2,1) = sin(phi)/cos(theta);
+  rot_mat(2,2) = cos(phi)/cos(theta);
+
+  V3F angle_dot = rot_mat*gyro;
+
+  // modifying existing code to use angle dot matrix (move gyro measurements from body frame to intertial frame)
+  float predictedPitch = pitchEst + dtIMU * angle_dot.y;
+  float predictedRoll = rollEst + dtIMU * angle_dot.x;
+  ekfState(6) = ekfState(6) + dtIMU * angle_dot.z;	// yaw
 
   // normalize yaw to -pi .. pi
   if (ekfState(6) > F_PI) ekfState(6) -= 2.f*F_PI;
   if (ekfState(6) < -F_PI) ekfState(6) += 2.f*F_PI;
+
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
@@ -161,7 +178,7 @@ VectorXf QuadEstimatorEKF::PredictState(VectorXf curState, float dt, V3F accel, 
   Quaternion<float> attitude = Quaternion<float>::FromEuler123_RPY(rollEst, pitchEst, curState(6));
 
   ////////////////////////////// BEGIN STUDENT CODE ///////////////////////////
-
+  
 
   /////////////////////////////// END STUDENT CODE ////////////////////////////
 
