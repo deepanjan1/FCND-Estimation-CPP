@@ -1,3 +1,6 @@
+# [WIP] Estimation Project Writeup #
+This is my project write up for the estimation part of my controller that is used on a CPP simulator in XCode.  We have the following steps covered:
+
 # Estimation Project #
 
 Welcome to the estimation project.  In this project, you will be developing the estimation portion of the controller used in the CPP simulator.  By the end of the project, your simulated quad will be flying with your estimator and your custom controller (from the previous project)!
