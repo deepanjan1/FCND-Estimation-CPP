@@ -1,5 +1,46 @@
-# [WIP] Estimation Project Writeup #
-This is my project write up for the estimation part of my controller that is used on a CPP simulator in XCode.  We have the following steps covered:
+# Estimation Project Writeup #
+This is my project write up for the estimation part of my controller that is used on a CPP simulator in XCode.  
+
+## [Write Up] Step 1: Sensor Noise ##
+The proper standard deviation values for the GPS X data and Accelerometer data were calculated in a Jupyter notebook that can be found [here](config/standard_deviation_gps_accel.py.ipynb).
+
+We used these numbers to update the `MeasuredStdDev_GPSPosXY` and `MeasuredStdDev_AccelXY` values within `config/6_Sensornoise.txt`.  The values we found are below.  Both are subject to change based on the data coming in from the GPS and Accelerometer. 
+
+```python
+MeasuredStdDev_GPSPosXY = 0.7139549237774065
+MeasuredStdDev_AccelXY = 0.5110816259678421
+```
+
+## [Write Up] Step 2: Attitude Estimation ##
+This step was to build a better rate gyro integration scheme in the `UpdateFromIMU()` function (`line 96 - 118` in `/src/QuadEstimatorEKF.cpp`).  This was accomplished as follows:
+1. The function builds a rotation matrix based on the inputted Euler angles that are in the body frame.  
+2. The rotation matrix shifts this into the inertial frame which is then integrated over `dtIMU`
+3. The yaw angles are then normalized to stay within +/- pi.
+
+## [Write Up] Step 3: Prediction Step ##
+Here we ran the `08_PredictState` and implemented the function `PredictState()` (addressed in `line 180 - 196`) and built RgbPrime via the function `GetRgbPrime()` (addressed in `line 222 - 234`).  
+
+### `PredictState()` Implementation ###
+1. The predict state integrates the current state velocity (via `Vector XF curState`) over `dt` to calculate the predicted state positions (within `Vector XF predictedState`).  
+2. The body frame acceleration is converted to the internal from by converting the estimated angles to a Quaternion and implementing the class method `Rotate_BtoI(<V3F>)`.  
+3. These values are then integrated over `dt` to come up with the new predicted state velocities.
+
+### `GetRgbPrime()` Implementation ###
+This function was a simple calculation implementation of the _R'<sub>gb</sub>_ matrix found in [Estimation for Quadrotors](https://www.overleaf.com/read/vymfngphcccj) on page 9.
+
+### `Predict()` Implementation ###
+Finally, we update the covariance with the `Predict()` function.  This was done by building the Jacobian _g'()_, and using that to calculate the new, updated covariance of the prediction using the equation found on the pseudocode in [Estimation for Quadrotors](https://www.overleaf.com/read/vymfngphcccj) for `line 4` in **Algorithm 2**.  
+
+## [Write Up] Step 4: Magnetometer Update ##
+The magnetometer will help update the yaw angle (i.e. heading).  
+1. The `QYawStd` in `QuadEstimatorEKF.txt` was updated to capture the magnitude of drift.  The value was `QYawStd = 0.08`.  
+2. Finally we updated the `UpdateFromMag()` to take in the yaw value, calculate the delta between that and the current state and normalize the yaw.  
+
+## [Write Up] Step 5: Closed Loop + GPS Update ##
+We updated the `UpdateFromGPS()` function within `line 317 - 328` of `QuadEstimatorEKF.cpp` and simply updated `zFromX` and updated it with the `ekfState`.  In addition, in accordance with **Section 7.3.1**, _Equation 55_, we created _h'()_ and placed 1s at the diagonal.  
+
+## [Write Up] Step 6: Adding Your Controller ##
+After adding the controller from the previous [3D Controls Project](https://github.com/deepanjan1/FCND-Controls-CPP), we were able to still maintain the required position error requirement of _< 1m_.
 
 # Estimation Project #
 
